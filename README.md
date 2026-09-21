@@ -33,6 +33,12 @@ Use the matching `pk_live_...` public key as `VITE_PAYSTACK_PUBLIC_KEY` in the h
 9. Configure Paystack webhooks to a server-side endpoint before relying on recurring billing or asynchronous mobile-money confirmation. The current checkout verifies the transaction immediately, while webhook handling should reconcile delayed or reversed transactions.
 10. Test registration, email confirmation, login, product creation, sales, reports, logout, payment verification, dashboard access, and mobile scrolling.
 
+The owner account `princetechstudio@gmail.com` is configured as a dashboard
+access bypass for administration and testing. It still requires a valid
+Supabase login and does not mark the business as paid or bypass Paystack
+verification for other accounts. Remove this exception before handing the
+repository to another operator.
+
 The app uses hash-based routes, so the host must serve `index.html` for `/` and must not rewrite JavaScript or CSS asset requests to HTML. The service worker cache is versioned in `public/sw.js`; deploy that file with every release.
 
 ## CEO dashboard
