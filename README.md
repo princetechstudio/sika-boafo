@@ -45,13 +45,25 @@ The app uses hash-based routes, so the host must serve `index.html` for `/` and 
 
 Apply `supabase/migrations/006_ceo_pin.sql` and then `supabase/migrations/007_fix_ceo_pin_pgcrypto.sql` to production. If the old `gen_salt` error remains, rerun the complete 007 file; it recreates the functions after installing `pgcrypto` in the `extensions` schema. A signed-in business owner can open Settings, create a 4-digit CEO PIN, and then open `/#/ceo`. The PIN is hashed and verified inside Supabase; it is never stored in browser storage. The dashboard is scoped to the signed-in owner's business.
 
-## Developer console
+## Platform admin dashboard
 
-Set `VITE_DEVELOPER_EMAILS` to one or more comma-separated Supabase account emails, then rebuild:
+The platform admin dashboard is available at `/#/admin`. It is read-only and loads
+business, user, and payment summaries through the protected `admin-overview`
+Supabase Edge Function. Configure the administrator email in both the frontend
+allowlist and the server-side secret:
 
 ```bash
 VITE_DEVELOPER_EMAILS=you@example.com
+supabase secrets set ADMIN_EMAILS=you@example.com
 npm run build
 ```
 
-The private console is available at `/#/admin`. Users whose signed-in email is not on this list receive 404. For a multi-tenant production deployment, replace the client-side allowlist with a server-side Supabase role/custom claim before adding sensitive administrative actions.
+Deploy the function after applying the configuration:
+
+```bash
+supabase functions deploy admin-overview
+```
+
+Users whose signed-in email is not on the frontend allowlist receive 404, and
+the Edge Function separately rejects any email not in `ADMIN_EMAILS`. Never put
+the Supabase service-role key in Netlify or browser code.

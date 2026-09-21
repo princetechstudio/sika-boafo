@@ -1,2 +1,5 @@
 [functions.send-sms]
 verify_jwt = true
+
+[functions.admin-overview]
+verify_jwt = true

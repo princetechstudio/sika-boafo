@@ -55,12 +55,13 @@ function PaidDashboard() {
 }
 
 function DeveloperOnly() {
-  const email = authService.getSession()?.user.email.trim().toLowerCase();
+  const session = authService.getSession();
+  const email = session?.user.email.trim().toLowerCase();
   const allowed = (import.meta.env.VITE_DEVELOPER_EMAILS ?? "")
     .split(",")
     .map((value) => value.trim().toLowerCase())
     .filter(Boolean);
-  if (!email || !allowed.includes(email)) return <NotFound />;
+  if (!session || !email || !allowed.includes(email)) return <NotFound />;
   return <Admin />;
 }
 
@@ -162,7 +163,7 @@ export default function App() {
               <Route path="/register" element={<Register />} />
               <Route path="/auth/callback" element={<OAuthCallback />} />
               <Route path="/reset-password" element={<ResetPassword />} />
-              <Route path="/admin" element={<DeveloperOnly />} />
+              <Route path="/admin" element={<Protected><DeveloperOnly /></Protected>} />
 
               <Route element={<Protected><AppShell /></Protected>}>
                 <Route path="/dashboard" element={<PaidDashboard />} />
