@@ -10,7 +10,6 @@ import { authService } from "./services/authService";
 import PublicLayout from "./components/layout/PublicLayout";
 import AppShell, { ToastHost } from "./components/layout/AppShell";
 import { Button, KenteBar } from "./components/ui";
-import WhatsAppContact from "./components/WhatsAppContact";
 import Login from "./pages/auth/Login";
 import Register from "./pages/auth/Register";
 import OAuthCallback from "./pages/auth/OAuthCallback";
@@ -78,11 +77,6 @@ function NotFound() {
       </div>
     </div>
   );
-}
-
-function WhatsAppContactGate() {
-  const location = useLocation();
-  return location.pathname === "/dashboard" ? null : <WhatsAppContact />;
 }
 
 const Fallback = () => (
@@ -189,7 +183,6 @@ export default function App() {
             </Routes>
           </Suspense>
         </RouteLoadBoundary>
-        <WhatsAppContactGate />
         <ToastHost />
       </HashRouter>
     </AppProvider>

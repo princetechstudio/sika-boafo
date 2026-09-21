@@ -7,6 +7,7 @@ import { Button, KenteBar } from "../ui";
 import { cx } from "../../lib/format";
 import { authService } from "../../services/authService";
 import { Logo } from "./AppShell";
+import WhatsAppContact from "../WhatsAppContact";
 
 const LINKS = [
   { label: "Features", to: "/features" },
@@ -151,6 +152,7 @@ export default function PublicLayout() {
           </div>
         </div>
       </footer>
+      <WhatsAppContact />
     </div>
   );
 }

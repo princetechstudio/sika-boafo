@@ -4,6 +4,7 @@ import { Link } from "react-router-dom";
 import { ArrowLeft, CheckCircle2, TrendingUp, Users, Zap } from "lucide-react";
 import { KenteBar } from "../../components/ui";
 import { Logo } from "../../components/layout/AppShell";
+import WhatsAppContact from "../../components/WhatsAppContact";
 
 export default function AuthFrame({ children }: { children: React.ReactNode }) {
   return (
@@ -55,6 +56,7 @@ export default function AuthFrame({ children }: { children: React.ReactNode }) {
           </p>
         </div>
       </main>
+      <WhatsAppContact />
     </div>
   );
 }
