@@ -54,6 +54,9 @@ Deno.serve(async (request) => {
   if (payload.message.length > 480) return json({ error: "SMS message is too long" }, 400);
   const recipient = payload.recipient.replace(/[^\d+]/g, "").replace(/^\+/, "");
   const normalizedRecipient = recipient.startsWith("0") ? `233${recipient.slice(1)}` : recipient;
+  if (!/^233\d{9}$/.test(normalizedRecipient)) {
+    return json({ error: "Enter a valid Ghana mobile number" }, 400);
+  }
 
   const admin = createClient(supabaseUrl, serviceRoleKey);
   const { data: membership, error: membershipError } = await admin

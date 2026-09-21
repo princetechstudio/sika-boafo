@@ -121,7 +121,23 @@ export default function Register() {
           f.terms ? "border-ok/40 bg-ok-soft" : errors.terms ? "border-danger bg-danger-soft" : "border-line bg-card2")}>
           <input type="checkbox" checked={f.terms} onChange={(e) => set("terms", e.target.checked)} className="mt-0.5 size-4 accent-[#0e9f6e]" />
           <span className="text-[13px] text-sub leading-relaxed">
-            I agree to the <b className="text-ink">Terms of Service</b> and <b className="text-ink">Privacy Policy</b>.
+            I agree to the{" "}
+            <Link
+              to="/terms"
+              onClick={(e) => e.stopPropagation()}
+              className="font-bold text-brand underline underline-offset-2 hover:text-brand-deep"
+            >
+              Terms of Service
+            </Link>{" "}
+            and{" "}
+            <Link
+              to="/privacy"
+              onClick={(e) => e.stopPropagation()}
+              className="font-bold text-brand underline underline-offset-2 hover:text-brand-deep"
+            >
+              Privacy Policy
+            </Link>
+            .
           </span>
         </label>
         {errors.terms && <p className="text-xs font-medium text-danger -mt-2">{errors.terms}</p>}
