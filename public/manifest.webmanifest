@@ -1,0 +1,27 @@
+{
+  "name": "Sika Boafo — Know Your Numbers. Grow Your Business.",
+  "short_name": "Sika Boafo",
+  "description": "The simple business manager for Ghanaian shops, food vendors, salons and SMEs.",
+  "start_url": "/#/",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#F2F5FB",
+  "theme_color": "#0A1F44",
+  "lang": "en-GH",
+  "dir": "ltr",
+  "categories": ["business", "finance", "productivity"],
+  "icons": [
+    {
+      "src": "/logo.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/logo.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}
