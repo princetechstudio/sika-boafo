@@ -37,7 +37,6 @@ const Receipts = React.lazy(() => import("./pages/Receipts"));
 const Staff = React.lazy(() => import("./pages/Staff"));
 const Settings = React.lazy(() => import("./pages/Settings"));
 const Admin = React.lazy(() => import("./pages/Admin"));
-const CeoDashboard = React.lazy(() => import("./pages/CeoDashboard"));
 
 function Protected({ children }: { children: React.ReactElement }) {
   const loc = useLocation();
@@ -168,7 +167,6 @@ export default function App() {
 
               <Route element={<Protected><AppShell /></Protected>}>
                 <Route path="/dashboard" element={<PaidDashboard />} />
-                <Route path="/ceo" element={<CeoDashboard />} />
                 <Route path="/products" element={<Products />} />
                 <Route path="/inventory" element={<Inventory />} />
                 <Route path="/sales" element={<Sales />} />

@@ -41,10 +41,6 @@ repository to another operator.
 
 The app uses hash-based routes, so the host must serve `index.html` for `/` and must not rewrite JavaScript or CSS asset requests to HTML. The service worker cache is versioned in `public/sw.js`; deploy that file with every release.
 
-## CEO dashboard
-
-Apply `supabase/migrations/006_ceo_pin.sql` and then `supabase/migrations/007_fix_ceo_pin_pgcrypto.sql` to production. If the old `gen_salt` error remains, rerun the complete 007 file; it recreates the functions after installing `pgcrypto` in the `extensions` schema. A signed-in business owner can open Settings, create a 4-digit CEO PIN, and then open `/#/ceo`. The PIN is hashed and verified inside Supabase; it is never stored in browser storage. The dashboard is scoped to the signed-in owner's business.
-
 ## Platform admin dashboard
 
 The platform admin dashboard is available at `/#/admin`. It is read-only and loads

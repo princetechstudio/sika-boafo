@@ -7,7 +7,6 @@ import { useApp, useTheme } from "../state/store";
 import { authService } from "../services/authService";
 import { BUSINESS_TYPES, GH_REGIONS } from "../data/mockData";
 import { cx } from "../lib/format";
-import { setCeoPin } from "../services/ceoService";
 
 type TabId = "business" | "profile" | "notifications" | "appearance" | "subscription";
 
@@ -21,7 +20,6 @@ export default function Settings() {
     (location.state as { tab?: TabId } | null)?.tab ?? "business"
   ));
   const [resetOpen, setResetOpen] = useState(false);
-  const [ceoPin, setCeoPinValue] = useState("");
 
   const [biz, setBiz] = useState({ ...data.settings });
   const [profile, setProfile] = useState({
@@ -94,25 +92,6 @@ export default function Settings() {
           </div>
           <div className="mt-6 flex justify-end">
             <Button onClick={saveBiz}><Save className="size-4" /> Save Business Details</Button>
-          </div>
-        </Card>
-        <Card className="p-6">
-          <div className="flex items-start gap-3">
-            <KeyRound className="size-5 text-brand mt-1" />
-            <div className="flex-1">
-              <h2 className="font-display font-bold text-ink">CEO Dashboard PIN</h2>
-              <p className="text-sm text-sub mt-1">Create or change the 4-digit PIN used by the business owner to unlock the CEO dashboard.</p>
-              <div className="mt-4 flex flex-col sm:flex-row gap-3 sm:items-end">
-                <Field label="4-digit PIN">
-                  <Input value={ceoPin} onChange={(event) => setCeoPinValue(event.target.value.replace(/\D/g, "").slice(0, 4))} inputMode="numeric" maxLength={4} type="password" placeholder="••••" />
-                </Field>
-                <Button onClick={async () => {
-                  try { await setCeoPin(ceoPin); setCeoPinValue(""); toast("CEO PIN saved securely."); }
-                  catch (error) { toast(error instanceof Error ? error.message : "Unable to save CEO PIN.", "error"); }
-                }} disabled={ceoPin.length !== 4}><KeyRound className="size-4" /> Save PIN</Button>
-                <Button variant="secondary" onClick={() => nav("/ceo")}>Open CEO Dashboard</Button>
-              </div>
-            </div>
           </div>
         </Card>
         </div>
