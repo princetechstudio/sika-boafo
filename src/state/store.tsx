@@ -292,7 +292,12 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
           target_payments: action.sale.payments.map((payment) => ({ amount: payment.amount, method: databasePaymentMethod(payment.method) })),
         }).then(({ error }) => { if (error) throw error; });
       } else if (action.type === "PAYMENT_RECORD") {
-        const { error } = await supabase.rpc("record_sale_payment", { target_business_id: businessId, target_sale_id: action.saleId, payment_amount: action.amount, payment_method: action.method });
+        const { error } = await supabase.rpc("record_sale_payment", {
+          target_business_id: businessId,
+          target_sale_id: action.saleId,
+          payment_amount: action.amount,
+          payment_method: databasePaymentMethod(action.method),
+        });
         if (error) throw error;
       } else if (action.type === "SALE_VOID") {
         const { error } = await supabase.rpc("void_sale", { target_business_id: businessId, target_sale_id: action.saleId, void_reason: action.reason });
@@ -362,6 +367,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         });
         if (error) throw error;
       }
+
       reducerDispatch(action);
     };
     void persist().catch((error: unknown) => console.error("Database update failed", error));
