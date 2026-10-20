@@ -7,6 +7,12 @@ export interface Session {
   signedInAt: string;
 }
 
+export interface BusinessMembership {
+  id: string;
+  name: string;
+  type: string;
+}
+
 type AuthInput = {
   fullName: string;
   email: string;
@@ -20,6 +26,21 @@ type AuthInput = {
 const AUTH_CACHE_KEY = "kasabiz_auth_session";
 const PENDING_ONBOARDING_KEY = "kasabiz_pending_onboarding";
 const AUTH_TIMEOUT_MS = 10000;
+export const BUSINESS_CHANGED_EVENT = "kasabiz-business-changed";
+
+type BusinessRow = {
+  id: string;
+  name: string;
+  business_type: string;
+  region: string | null;
+};
+
+type MembershipRow = {
+  business_id: string;
+  display_name: string;
+  phone: string | null;
+  businesses: BusinessRow | null;
+};
 
 async function withTimeout<T>(request: PromiseLike<T>, message: string): Promise<T> {
   let timer: number | undefined;
@@ -104,21 +125,34 @@ const createBusinessForUser = async (data: AuthInput): Promise<void> => {
   clearPendingOnboarding();
 };
 
-const sessionFromUser = async (user: { id: string; email?: string; user_metadata?: Record<string, unknown> }): Promise<Session> => {
-  const { data: membership, error: membershipError } = await withTimeout(supabase
+const membershipsForUser = async (userId: string): Promise<MembershipRow[]> => {
+  const { data, error } = await withTimeout(supabase
     .from("business_members")
     .select("business_id, display_name, phone, businesses(id, name, business_type, region)")
-    .eq("user_id", user.id)
+    .eq("user_id", userId)
     .eq("status", "active")
-    .limit(1)
-    .maybeSingle(), "Loading your business is taking too long. Check your connection and try again.");
+    .order("created_at"), "Loading your businesses is taking too long. Check your connection and try again.");
 
-  if (membershipError) throw membershipError;
-  if (!membership?.businesses || Array.isArray(membership.businesses)) {
+  if (error) throw error;
+  return (data ?? []).map((membership) => ({
+    business_id: membership.business_id,
+    display_name: membership.display_name,
+    phone: membership.phone,
+    businesses: Array.isArray(membership.businesses)
+      ? membership.businesses[0] ?? null
+      : membership.businesses,
+  }));
+};
+
+const sessionForMembership = (
+  user: { email?: string },
+  membership: MembershipRow,
+): Session => {
+  const business = membership.businesses;
+  if (!business) {
     throw new Error("Your account is not connected to a business yet.");
   }
 
-  const business = membership.businesses as { id: string; name: string; business_type: string; region: string | null };
   return cacheSession({
     user: {
       name: membership.display_name,
@@ -136,6 +170,21 @@ const sessionFromUser = async (user: { id: string; email?: string; user_metadata
     },
     signedInAt: new Date().toISOString(),
   });
+};
+
+const sessionFromUser = async (
+  user: { id: string; email?: string; user_metadata?: Record<string, unknown> },
+  preferredBusinessId?: string,
+): Promise<Session> => {
+  const memberships = await membershipsForUser(user.id);
+  const cached = authService.getSession();
+  const selectedId = preferredBusinessId ??
+    (cached && cached.user.email.toLowerCase() === user.email?.toLowerCase() ? cached.business.id : undefined);
+  const membership = memberships.find((item) => item.business_id === selectedId) ?? memberships[0];
+  if (!membership) {
+    throw new Error("Your account is not connected to a business yet.");
+  }
+  return sessionForMembership(user, membership);
 };
 
 export const authService = {
@@ -208,6 +257,76 @@ export const authService = {
 
     const session = await this.getCurrentSession();
     if (!session) throw new Error("Google sign-in did not return a session.");
+    return session;
+  },
+
+  async getBusinesses(): Promise<BusinessMembership[]> {
+    requireSupabaseConfigured();
+    const { data: authData, error: authError } = await withTimeout(
+      supabase.auth.getUser(),
+      "Loading your account is taking too long. Please try again.",
+    );
+    if (authError) throw authError;
+    if (!authData.user) throw new Error("You must be signed in to load your businesses.");
+
+    const memberships = await membershipsForUser(authData.user.id);
+    return memberships.flatMap((membership) => {
+      if (!membership.businesses) return [];
+      return [{
+        id: membership.business_id,
+        name: membership.businesses.name,
+        type: membership.businesses.business_type,
+      }];
+    });
+  },
+
+  async switchBusiness(businessId: string): Promise<Session> {
+    requireSupabaseConfigured();
+    const { data: authData, error: authError } = await withTimeout(
+      supabase.auth.getUser(),
+      "Loading your account is taking too long. Please try again.",
+    );
+    if (authError) throw authError;
+    if (!authData.user) throw new Error("You must be signed in to switch businesses.");
+
+    const memberships = await membershipsForUser(authData.user.id);
+    const membership = memberships.find((item) => item.business_id === businessId);
+    if (!membership) throw new Error("You do not have access to that business.");
+
+    const session = sessionForMembership(authData.user, membership);
+    window.dispatchEvent(new Event(BUSINESS_CHANGED_EVENT));
+    return session;
+  },
+
+  async createBusiness(input: Omit<AuthInput, "email" | "password">): Promise<Session> {
+    requireSupabaseConfigured();
+    const { data: authData, error: authError } = await withTimeout(
+      supabase.auth.getUser(),
+      "Loading your account is taking too long. Please try again.",
+    );
+    if (authError) throw authError;
+    if (!authData.user) throw new Error("You must be signed in to create a business.");
+
+    const businessName = input.businessName.trim();
+    const memberName = input.fullName.trim();
+    if (businessName.length < 2) throw new Error("Business name must be at least 2 characters.");
+    if (memberName.length < 2) throw new Error("Your name must be at least 2 characters.");
+
+    const { data: businessId, error } = await withTimeout(
+      supabase.rpc("create_business", {
+        business_name: businessName,
+        business_type: input.businessType,
+        business_region: input.region ?? "",
+        member_name: memberName,
+        member_phone: input.phone.trim(),
+      }),
+      "Business creation timed out. Please try again.",
+    );
+    if (error) throw error;
+    if (!businessId) throw new Error("The business was created but could not be selected.");
+
+    const session = await sessionFromUser(authData.user, businessId);
+    window.dispatchEvent(new Event(BUSINESS_CHANGED_EVENT));
     return session;
   },
 

@@ -2,7 +2,7 @@
 import React, { Suspense, useCallback, useMemo, useState } from "react";
 import { NavLink, Outlet, useLocation, useNavigate } from "react-router-dom";
 import {
-  AlertTriangle, ArrowLeftRight, Bell, Boxes, CreditCard, FileText,
+  AlertTriangle, ArrowLeftRight, Bell, Boxes, CreditCard, FileText, Plus,
   LayoutDashboard, LogOut, Menu, PackagePlus, PanelLeftClose, PanelLeftOpen,
   Receipt, ScrollText, Settings, ShieldCheck, ShoppingCart, Store, UserRound,
   Users, Wallet, X, Zap, CheckCircle2, Info, XCircle,
@@ -10,10 +10,12 @@ import {
 import { useApp, useTheme } from "../../state/store";
 import type { Toast } from "../../state/store";
 import { authService } from "../../services/authService";
+import type { BusinessMembership } from "../../services/authService";
 import { getDebtors, getLowStock } from "../../services/dataService";
-import { Avatar, Badge, Button, KenteBar } from "../ui";
+import { Avatar, Badge, Button, Field, Input, KenteBar, Modal, Select } from "../ui";
 import { cx } from "../../lib/format";
 import { useClickOutside } from "../../lib/hooks";
+import { BUSINESS_TYPES, GH_REGIONS } from "../../data/mockData";
 
 /* ---------------------------------- logo ---------------------------------- */
 
@@ -149,6 +151,138 @@ function SidebarContent({ collapsed, onNavigate, onToggle }: {
   );
 }
 
+function BusinessSwitcher() {
+  const { toast } = useApp();
+  const session = authService.getSession();
+  const [businesses, setBusinesses] = useState<BusinessMembership[]>([]);
+  const [selectedId, setSelectedId] = useState(session?.business.id ?? "");
+  const [loading, setLoading] = useState(false);
+  const [createOpen, setCreateOpen] = useState(false);
+  const [form, setForm] = useState({
+    name: "",
+    type: "Retail",
+    region: "Greater Accra",
+  });
+
+  React.useEffect(() => {
+    let active = true;
+    void authService.getBusinesses().then((rows) => {
+      if (!active) return;
+      setBusinesses(rows);
+      const currentId = authService.getSession()?.business.id;
+      if (currentId && rows.some((business) => business.id === currentId)) setSelectedId(currentId);
+    }).catch((error: unknown) => {
+      if (active) toast(error instanceof Error ? error.message : "Could not load your businesses.", "error");
+    });
+    return () => { active = false; };
+  }, [toast]);
+
+  const switchBusiness = async (businessId: string) => {
+    if (!businessId || businessId === selectedId) return;
+    setLoading(true);
+    try {
+      await authService.switchBusiness(businessId);
+      setSelectedId(businessId);
+      toast("Business switched.");
+    } catch (error: unknown) {
+      toast(error instanceof Error ? error.message : "Could not switch businesses.", "error");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const createBusiness = async () => {
+    setLoading(true);
+    try {
+      const next = await authService.createBusiness({
+        fullName: session?.user.name ?? "",
+        phone: session?.user.phone ?? "",
+        businessName: form.name,
+        businessType: form.type,
+        region: form.region,
+      });
+      const created: BusinessMembership = {
+        id: next.business.id,
+        name: next.business.name,
+        type: next.business.type,
+      };
+      setBusinesses((current) => [...current.filter((business) => business.id !== created.id), created]);
+      setSelectedId(created.id);
+      setCreateOpen(false);
+      setForm({ name: "", type: "Retail", region: "Greater Accra" });
+      toast(`${created.name} is ready.`);
+    } catch (error: unknown) {
+      toast(error instanceof Error ? error.message : "Could not create the business.", "error");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <>
+      <div className="flex min-w-0 items-center gap-1">
+        <Store className="size-3 shrink-0 text-sub" />
+        <select
+          aria-label="Select business"
+          className="min-w-0 max-w-[150px] truncate border-0 bg-transparent py-0 pl-0 pr-5 text-xs font-medium text-sub focus:ring-0 sm:max-w-[220px]"
+          value={selectedId}
+          disabled={loading || businesses.length < 2}
+          onChange={(event) => { void switchBusiness(event.target.value); }}
+        >
+          {businesses.map((business) => (
+            <option key={business.id} value={business.id}>{business.name}</option>
+          ))}
+          {businesses.length === 0 && <option value={selectedId}>{session?.business.name ?? "Business"}</option>}
+        </select>
+        <button
+          type="button"
+          aria-label="Create business"
+          title="Create another business"
+          disabled={loading}
+          onClick={() => setCreateOpen(true)}
+          className="grid size-6 shrink-0 place-items-center rounded-md text-sub transition hover:bg-card2 hover:text-ink disabled:opacity-50"
+        >
+          <Plus className="size-4" />
+        </button>
+      </div>
+
+      <Modal
+        open={createOpen}
+        onClose={() => { if (!loading) setCreateOpen(false); }}
+        title="Create a business"
+        sub="Add another business workspace to this account."
+        footer={
+          <>
+            <Button variant="secondary" disabled={loading} onClick={() => setCreateOpen(false)}>Cancel</Button>
+            <Button loading={loading} onClick={() => { void createBusiness(); }}>Create business</Button>
+          </>
+        }
+      >
+        <div className="space-y-4">
+          <Field label="Business name">
+            <Input
+              autoFocus
+              value={form.name}
+              placeholder="e.g. Adom Fashion"
+              onChange={(event) => setForm((current) => ({ ...current, name: event.target.value }))}
+            />
+          </Field>
+          <Field label="Business type">
+            <Select value={form.type} onChange={(event) => setForm((current) => ({ ...current, type: event.target.value }))}>
+              {BUSINESS_TYPES.map((type) => <option key={type}>{type}</option>)}
+            </Select>
+          </Field>
+          <Field label="Region">
+            <Select value={form.region} onChange={(event) => setForm((current) => ({ ...current, region: event.target.value }))}>
+              {GH_REGIONS.map((region) => <option key={region}>{region}</option>)}
+            </Select>
+          </Field>
+        </div>
+      </Modal>
+    </>
+  );
+}
+
 /* --------------------------------- toasts ---------------------------------- */
 
 const TOAST_ICON: Record<Toast["tone"], React.ReactNode> = {
@@ -194,7 +328,7 @@ export default function AppShell() {
 
   const session = authService.getSession();
   const userName = session?.user.name ?? "Prince";
-  const bizName = data.settings.name;
+  const bizName = session?.business.name ?? data.settings.name;
 
   React.useEffect(() => { setDrawer(false); setUserOpen(false); setBellOpen(false); }, [loc.pathname]);
 
@@ -261,11 +395,9 @@ export default function AppShell() {
             className="md:hidden p-2 -ml-1 rounded-lg text-sub hover:text-ink hover:bg-card2 transition">
             <Menu className="size-5" />
           </button>
-          <div className="min-w-0">
+          <div className="min-w-0 flex-1 sm:flex-none">
             <h1 className="font-display font-bold text-[17px] text-ink leading-tight truncate">{title}</h1>
-            <p className="hidden sm:flex items-center gap-1.5 text-xs text-sub truncate">
-              <Store className="size-3" /> {bizName}
-            </p>
+            <BusinessSwitcher />
           </div>
 
           <div className="ml-auto flex items-center gap-1.5 sm:gap-2">

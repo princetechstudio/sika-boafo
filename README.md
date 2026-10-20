@@ -8,6 +8,13 @@
 4. Set `VITE_PAYSTACK_PUBLIC_KEY` if paid checkout is enabled.
 5. Run `npm install`, then `npm run dev`.
 
+## Multiple businesses
+
+After signing in, use the business selector in the app header to switch between
+businesses linked to your account. Select the plus button beside it to create
+another business; the new business is added to the same account and selected
+immediately. Each business keeps its own data and subscription plan.
+
 ## Production release
 
 1. Apply the SQL files in `supabase/migrations` to the production Supabase project.

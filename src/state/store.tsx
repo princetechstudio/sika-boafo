@@ -9,7 +9,7 @@ import type {
   Product, Purchase, Sale, SaleItem, StaffMember, AuditLog,
 } from "../data/mockData";
 import { uid } from "../lib/format";
-import { authService } from "../services/authService";
+import { authService, BUSINESS_CHANGED_EVENT } from "../services/authService";
 import { loadBusinessData } from "../services/businessDataService";
 import { supabase } from "../lib/supabase";
 
@@ -247,26 +247,33 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     let active = true;
+    let loadVersion = 0;
     const load = async () => {
+      const currentLoad = ++loadVersion;
       const session = authService.getSession();
-      if (active) setDataLoading(true);
+      if (active) {
+        setDataLoading(true);
+        reducerDispatch({ type: "DATA_LOAD", data: emptyData });
+      }
       if (!session?.business.id) {
         if (active) setDataLoading(false);
         return;
       }
       try {
         const data = await loadBusinessData(session.business.id);
-        if (active) reducerDispatch({ type: "DATA_LOAD", data });
+        if (active && currentLoad === loadVersion) reducerDispatch({ type: "DATA_LOAD", data });
       } catch (error: unknown) {
-        console.error("Unable to load business data", error);
+        if (active && currentLoad === loadVersion) console.error("Unable to load business data", error);
       } finally {
-        if (active) setDataLoading(false);
+        if (active && currentLoad === loadVersion) setDataLoading(false);
       }
     };
     void load();
     const { data: authListener } = supabase.auth.onAuthStateChange(() => { void load(); });
+    window.addEventListener(BUSINESS_CHANGED_EVENT, load);
     return () => {
       active = false;
+      window.removeEventListener(BUSINESS_CHANGED_EVENT, load);
       authListener.subscription.unsubscribe();
     };
   }, []);
@@ -368,7 +375,9 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         if (error) throw error;
       }
 
-      reducerDispatch(action);
+      if (authService.getSession()?.business.id === businessId) {
+        reducerDispatch(action);
+      }
     };
     void persist().catch((error: unknown) => console.error("Database update failed", error));
   }, []);
